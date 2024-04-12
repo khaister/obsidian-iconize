@@ -24,7 +24,7 @@ export const getPath = (): string => {
 
 export const setPath = (newPath: string): void => {
   if (newPath === 'plugins/obsidian-icon-folder/icons') {
-    newPath = '.obsidian/plugins/obsidian-icon-folder/icons';
+    newPath = '.obsidian/plugins/obsidian-iconize/icons';
     new Notice(
       `[${config.PLUGIN_NAME}] Due to a change in version v1.2.2, the icon pack folder changed. Please change it in the settings to not be directly in /plugins.`,
       8000,

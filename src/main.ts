@@ -682,7 +682,7 @@ export default class IconFolderPlugin extends Plugin {
   }
 
   onunload() {
-    console.log('unloading obsidian-icon-folder');
+    console.info('unloading obsidian-iconize');
   }
 
   renameFolder(newPath: string, oldPath: string): void {
