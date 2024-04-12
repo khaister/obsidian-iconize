@@ -1,3 +1,6 @@
+// TODO: Optimize the code to reduce the number of iterations and improve the
+// performance.
+
 import { syntaxTree, tokenClassNodeProp } from '@codemirror/language';
 import icon from '@app/lib/icon';
 import {
@@ -9,6 +12,7 @@ import {
   StateField,
 } from '@codemirror/state';
 import IconFolderPlugin from '@app/main';
+import emoji from '@app/emoji';
 
 export type PositionField = StateField<RangeSet<IconPosition>>;
 
@@ -53,18 +57,32 @@ export const buildPositionField = (plugin: IconFolderPlugin) => {
     excludeTo: number,
     updateRange: UpdateRangeFunc,
   ): void => {
+    let isSourceMode = false;
+    // Iterate over all leaves to check if any is in source mode
+    plugin.app.workspace.iterateAllLeaves((leaf) => {
+      if (!isSourceMode && leaf.view.getViewType() === 'markdown') {
+        if (leaf.getViewState().state?.source) {
+          isSourceMode = true;
+        }
+      }
+    });
+    if (isSourceMode) {
+      return;
+    }
     const text = state.doc.sliceString(0, state.doc.length);
     const identifier = plugin.getSettings().iconIdentifier;
     const regex = new RegExp(
       `(${identifier})((\\w{1,64}:\\d{17,18})|(\\w{1,64}))(${identifier})`,
       'g',
     );
-    for (const { 0: rawCode, index: offset } of text.matchAll(regex)) {
+    const iconMatch = text.matchAll(regex);
+    const emojiMatch = text.matchAll(emoji.getRegex());
+    for (const { 0: rawCode, index: offset } of [...iconMatch, ...emojiMatch]) {
       const iconName = rawCode.substring(
         identifier.length,
         rawCode.length - identifier.length,
       );
-      if (!icon.getIconByName(iconName)) {
+      if (!icon.getIconByName(iconName) && !emoji.isEmoji(iconName)) {
         continue;
       }
 
@@ -135,9 +153,18 @@ export const buildPositionField = (plugin: IconFolderPlugin) => {
   return StateField.define<RangeSet<IconPosition>>({
     create: (state) => {
       const rangeSet = new RangeSetBuilder<IconPosition>();
-      // Check all the ranges of the icons in the entire document. There is no
-      // exclusion going on here.
-      checkRanges(state, -1, -1, rangeSet.add.bind(rangeSet));
+      const changedLines: {
+        from: number;
+        to: number;
+        iconPosition: IconPosition;
+      }[] = [];
+      checkRanges(state, -1, -1, (from, to, iconPosition) => {
+        changedLines.push({ from, to, iconPosition });
+      });
+      changedLines.sort((a, b) => a.from - b.from);
+      for (const { from, to, iconPosition } of changedLines) {
+        rangeSet.add(from, to, iconPosition);
+      }
       return rangeSet.finish();
     },
     update: (rangeSet, transaction) => {

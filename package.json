@@ -1,6 +1,6 @@
 {
   "name": "@florianwoelki/obsidian-iconize",
-  "version": "2.11.5",
+  "version": "2.11.9",
   "description": "API for adding icons to obsidian.",
   "main": "lib/index.js",
   "type": "module",
@@ -60,7 +60,7 @@
     "tslib": "^2.6.2",
     "twemoji": "^14.0.2",
     "typescript": "^5.4.2",
-    "vitepress": "1.0.0-rc.45",
+    "vitepress": "1.1.0",
     "vitest": "^1.4.0"
   },
   "dependencies": {

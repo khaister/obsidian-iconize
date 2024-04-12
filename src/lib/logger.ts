@@ -11,13 +11,16 @@ interface Logger {
   info(message: string, ...optionalParams: unknown[]): void;
   warn(message: string, ...optionalParams: unknown[]): void;
   error(message: string, ...optionalParams: unknown[]): void;
+  toggleLogging(enabled: boolean): void;
 }
 
 export class ConsoleLogger implements Logger {
   private projectPrefix: string;
+  private enabled: boolean;
 
-  constructor(projectPrefix: string) {
+  constructor(projectPrefix: string, enabled: boolean = false) {
     this.projectPrefix = projectPrefix;
+    this.enabled = enabled;
   }
 
   private logLevels: Record<LogLevel, LogLevelInformation> = {
@@ -41,19 +44,31 @@ export class ConsoleLogger implements Logger {
   }
 
   log(message: string, ...optionalParams: unknown[]): void {
-    console.log(...this.formatMessage('log', message, optionalParams));
+    if (this.enabled) {
+      console.log(...this.formatMessage('log', message, optionalParams));
+    }
   }
 
   info(message: string, ...optionalParams: unknown[]): void {
-    console.info(...this.formatMessage('info', message, optionalParams));
+    if (this.enabled) {
+      console.info(...this.formatMessage('info', message, optionalParams));
+    }
   }
 
   warn(message: string, ...optionalParams: unknown[]): void {
-    console.warn(...this.formatMessage('warn', message, optionalParams));
+    if (this.enabled) {
+      console.warn(...this.formatMessage('warn', message, optionalParams));
+    }
   }
 
   error(message: string, ...optionalParams: unknown[]): void {
-    console.error(...this.formatMessage('error', message, optionalParams));
+    if (this.enabled) {
+      console.error(...this.formatMessage('error', message, optionalParams));
+    }
+  }
+
+  toggleLogging(enabled: boolean): void {
+    this.enabled = enabled;
   }
 }
 
