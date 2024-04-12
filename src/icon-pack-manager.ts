@@ -70,7 +70,6 @@ export const moveIconPackDirectories = async (
       const doesDirExist = await createDirectory(plugin, iconPack.name);
       if (doesDirExist) {
         new Notice(`Directory with name ${iconPack.name} already exists.`);
-        continue;
       }
     }
 
@@ -99,19 +98,6 @@ export const moveIconPackDirectories = async (
     }
 
     new Notice(`...moved ${iconPack.name}`);
-  }
-
-  // Removes all the existing icon packs in the `from` directory.
-  for (let i = 0; i < iconPacks.length; i++) {
-    const iconPack = iconPacks[i];
-    if (await plugin.app.vault.adapter.exists(`${from}/${iconPack.name}`)) {
-      await plugin.app.vault.adapter.rmdir(`${from}/${iconPack.name}`, true);
-    }
-  }
-
-  // Remove root directory that contains all the icon packs.
-  if (!to.startsWith(from)) {
-    await plugin.app.vault.adapter.rmdir(`${from}`, true);
   }
 };
 
@@ -168,12 +154,6 @@ export const getNormalizedName = (s: string) => {
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join('');
 };
-
-// export const normalizeFileName = async (plugin: Plugin, oldPath: string) => {
-//   const fileName = oldPath.split('/').pop();
-//   const newPath = oldPath.substring(0, oldPath.indexOf(fileName)) + getNormalizedName(fileName);
-//   await plugin.app.vault.adapter.rename(oldPath, newPath);
-// };
 
 export const createZipFile = async (
   plugin: Plugin,
@@ -237,6 +217,13 @@ export const getAllIconPacks = () => {
 
 export const getIconPack = (name: string) => {
   return iconPacks.find((ip) => ip.name === name);
+};
+
+export const getFilesInIconPackDirectory = async (
+  plugin: Plugin,
+  iconPackName: string,
+): Promise<string[]> => {
+  return getFilesInDirectory(plugin, `${path}/${iconPackName}`);
 };
 
 export const getFilesInDirectory = async (
@@ -487,20 +474,28 @@ export const addIconToIconPack = (
   iconName: string,
   iconContent: string,
 ): Icon | undefined => {
-  // Normalize the icon name to remove `-` or `_` in the name.
-  iconName = getNormalizedName(iconName);
-  const icon = generateIcon(iconPackName, iconName, iconContent);
-  if (!icon) {
-    console.warn(
-      `[iconize] icon could not be generated (icon: ${iconName}, content: ${iconContent}).`,
-    );
-    return undefined;
-  }
-
   const iconPack = iconPacks.find((iconPack) => iconPack.name === iconPackName);
   if (!iconPack) {
     console.warn(
       `[iconize] iconpack with name "${iconPackName}" was not found.`,
+    );
+    return undefined;
+  }
+
+  // Normalize the icon name to remove `-` or `_` in the name.
+  iconName = getNormalizedName(iconName);
+
+  if (iconPack.icons.find((icon) => icon.name === iconName)) {
+    console.warn(
+      `[iconize] icon with name "${iconName}" already exists in icon pack "${iconPackName}".`,
+    );
+    return undefined;
+  }
+
+  const icon = generateIcon(iconPackName, iconName, iconContent);
+  if (!icon) {
+    console.warn(
+      `[iconize] icon could not be generated (icon: ${iconName}, content: ${iconContent}).`,
     );
     return undefined;
   }

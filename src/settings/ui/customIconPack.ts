@@ -7,6 +7,7 @@ import {
   deleteIconPack,
   doesIconPackExist,
   getAllIconPacks,
+  getFilesInIconPackDirectory,
 } from '@app/icon-pack-manager';
 import IconFolderPlugin from '@app/main';
 import { readFileSync } from '@app/util';
@@ -72,7 +73,7 @@ export default class CustomIconPackSetting extends IconFolderSetting {
       .setName('Add custom icon pack')
       .setDesc('Add a custom icon pack.')
       .addText((text) => {
-        text.setPlaceholder('Your icon pack name');
+        text.setPlaceholder('icon pack name');
         this.textComponent = text;
       })
       .addButton((btn) => {
@@ -83,9 +84,7 @@ export default class CustomIconPackSetting extends IconFolderSetting {
             return;
           }
 
-          const normalizedName = this.normalizeIconPackName(
-            this.textComponent.getValue(),
-          );
+          const normalizedName = this.normalizeIconPackName(name);
 
           if (await doesIconPackExist(this.plugin, normalizedName)) {
             new Notice('Icon pack already exists.');
@@ -95,46 +94,15 @@ export default class CustomIconPackSetting extends IconFolderSetting {
           await createCustomIconPackDirectory(this.plugin, normalizedName);
           this.textComponent.setValue('');
           this.refreshDisplay();
-          new Notice('Icon pack successfully created.');
+          new Notice(`Icon pack ${name} (${normalizedName}) created.`);
         });
       });
 
     getAllIconPacks().forEach((iconPack) => {
       const iconPackSetting = new Setting(this.containerEl)
         .setName(`${iconPack.name} (${iconPack.prefix})`)
-        .setDesc(`Total icons: ${iconPack.icons.length}`);
-      // iconPackSetting.addButton((btn) => {
-      //   btn.setIcon('broken-link');
-      //   btn.setTooltip('Try to fix icon pack');
-      //   btn.onClick(async () => {
-      //     new Notice('Try to fix icon pack...');
-      //     getIconPack(iconPack.name).icons = [];
-      //     const icons = await getFilesInDirectory(this.plugin, `${getPath()}/${iconPack.name}`);
-      //     for (let i = 0; i < icons.length; i++) {
-      //       const filePath = icons[i];
-      //       const fileName = filePath.split('/').pop();
-      //       const file = await this.plugin.app.vault.adapter.read(filePath);
-      //       const iconContent = file
-      //         .replace(/stroke="#fff"/g, 'stroke="currentColor"')
-      //         .replace(/fill="#fff"/g, 'fill="currentColor"');
+        .setDesc(`${iconPack.icons.length} icons`);
 
-      //       await this.plugin.app.vault.adapter.write(filePath, iconContent);
-      //       await normalizeFileName(this.plugin, filePath);
-
-      //       addIconToIconPack(iconPack.name, fileName, iconContent);
-      //     }
-      //     new Notice('...tried to fix icon pack');
-
-      //     // Refreshes the DOM.
-      //     Object.entries(this.plugin.getData()).forEach(async ([k, v]) => {
-      //       const doesPathExist = await this.plugin.app.vault.adapter.exists(k, true);
-      //       if (doesPathExist && typeof v === 'string') {
-      //         // dom.removeIconInPath(k);
-      //         dom.createIconNode(this.plugin, k, v);
-      //       }
-      //     });
-      //   });
-      // });
       iconPackSetting.addButton((btn) => {
         btn.setIcon('plus');
         btn.setTooltip('Add an icon');
@@ -151,21 +119,39 @@ export default class CustomIconPackSetting extends IconFolderSetting {
               const content = await readFileSync(file);
               await createFile(this.plugin, iconPack.name, file.name, content);
               addIconToIconPack(iconPack.name, file.name, content);
-              iconPackSetting.setDesc(
-                `Total icons: ${iconPack.icons.length} (added: ${file.name})`,
-              );
             }
-            new Notice('Icons successfully added.');
+            iconPackSetting.setDesc(`${target.files.length} icons`);
+            new Notice(`${target.files.length} icons added.`);
           };
         });
       });
+
+      iconPackSetting.addButton((btn) => {
+        btn.setIcon('refresh-ccw');
+        btn.setTooltip('Refresh the icon pack');
+        btn.onClick(async () => {
+          iconPackSetting.setDesc('Loading icons...');
+          const files = await getFilesInIconPackDirectory(
+            this.plugin,
+            iconPack.name,
+          );
+          for (const fileName of files) {
+            const svg = await this.plugin.app.vault.adapter.read(fileName);
+            const iconName = fileName.split('/').pop();
+            addIconToIconPack(iconPack.name, iconName, svg);
+          }
+          new Notice(`Icon pack ${iconPack.name} refreshed.`);
+          iconPackSetting.setDesc(`${files.length} icons`);
+        });
+      });
+
       iconPackSetting.addButton((btn) => {
         btn.setIcon('trash');
         btn.setTooltip('Remove the icon pack');
         btn.onClick(async () => {
           await deleteIconPack(this.plugin, iconPack.name);
           this.refreshDisplay();
-          new Notice('Icon pack successfully deleted.');
+          new Notice(`Icon pack ${iconPack.name} deleted.`);
         });
       });
 
